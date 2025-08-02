@@ -13,11 +13,18 @@ services:
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_APP_USER=${POSTGRES_APP_USER}
       - POSTGRES_APP_PASSWORD=${POSTGRES_APP_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     networks:
       - g12-net
+  
   backend:
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     image: ${BACKEND_IMAGE_NAME}
     container_name: ${PROJECT_NAME}-backend
     restart: always
@@ -31,6 +38,7 @@ services:
       - DATABASE_USERNAME=${POSTGRES_APP_USER}
       - DATABASE_PASSWORD=${POSTGRES_APP_PASSWORD}
       - BACKEND_PORT=${BACKEND_PORT}
+  
   frontend:
     depends_on:
       - backend
@@ -44,9 +52,11 @@ services:
     environment:
       - NGINX_PROXY=http://${PROJECT_NAME}-backend:${BACKEND_PORT}
       - NGINX_PORT=${FRONTEND_PORT}
+
 volumes:
   g12-data:
     name: ${PROJECT_NAME}-g12-data
+
 networks:
   g12-net:
     name: ${PROJECT_NAME}-net
